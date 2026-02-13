@@ -1,3 +1,10 @@
+# [1.17.0](https://github.com/pchuri/confluence-cli/compare/v1.16.0...v1.17.0) (2026-02-13)
+
+
+### Features
+
+* add attachment upload and delete commands ([#36](https://github.com/pchuri/confluence-cli/issues/36)) ([ed62bb4](https://github.com/pchuri/confluence-cli/commit/ed62bb45468566c128f066016615048e31ed1775))
+
 # [1.16.0](https://github.com/pchuri/confluence-cli/compare/v1.15.1...v1.16.0) (2026-02-13)
 
 
