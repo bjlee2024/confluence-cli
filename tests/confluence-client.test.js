@@ -718,4 +718,224 @@ describe('ConfluenceClient', () => {
       mock.restore();
     });
   });
+
+  describe('content properties', () => {
+    test('should have required methods for property handling', () => {
+      expect(typeof client.listProperties).toBe('function');
+      expect(typeof client.getProperty).toBe('function');
+      expect(typeof client.setProperty).toBe('function');
+      expect(typeof client.deleteProperty).toBe('function');
+    });
+
+    test('listProperties should return results with pagination info', async () => {
+      const mock = new MockAdapter(client.client);
+      mock.onGet('/content/123/property').reply(200, {
+        results: [
+          { key: 'color', value: { hex: '#ff0000' }, version: { number: 1 } },
+          { key: 'status', value: 'active', version: { number: 3 } }
+        ],
+        _links: { next: '/rest/api/content/123/property?start=2&limit=25' }
+      });
+
+      const response = await client.listProperties('123');
+      expect(response.results).toHaveLength(2);
+      expect(response.results[0].key).toBe('color');
+      expect(response.results[1].key).toBe('status');
+      expect(response.nextStart).toBe(2);
+
+      mock.restore();
+    });
+
+    test('listProperties should return empty results when no properties exist', async () => {
+      const mock = new MockAdapter(client.client);
+      mock.onGet('/content/456/property').reply(200, { results: [] });
+
+      const response = await client.listProperties('456');
+      expect(response.results).toEqual([]);
+      expect(response.nextStart).toBeNull();
+
+      mock.restore();
+    });
+
+    test('listProperties should resolve page URLs', async () => {
+      const mock = new MockAdapter(client.client);
+      mock.onGet('/content/789/property').reply(200, { results: [] });
+
+      const response = await client.listProperties('https://test.atlassian.net/wiki/viewpage.action?pageId=789');
+      expect(response.results).toEqual([]);
+
+      mock.restore();
+    });
+
+    test('listProperties should pass limit and start as query params', async () => {
+      const mock = new MockAdapter(client.client);
+      mock.onGet('/content/123/property').reply((config) => {
+        expect(config.params.limit).toBe(5);
+        expect(config.params.start).toBe(10);
+        return [200, { results: [] }];
+      });
+
+      await client.listProperties('123', { limit: 5, start: 10 });
+
+      mock.restore();
+    });
+
+    test('getAllProperties should accumulate results across pages', async () => {
+      const mock = new MockAdapter(client.client);
+      let callCount = 0;
+      mock.onGet('/content/123/property').reply((config) => {
+        callCount++;
+        if (callCount === 1) {
+          expect(config.params.start).toBe(0);
+          return [200, {
+            results: [{ key: 'a', value: 1, version: { number: 1 } }],
+            _links: { next: '/rest/api/content/123/property?start=1&limit=1' }
+          }];
+        }
+        expect(config.params.start).toBe(1);
+        return [200, {
+          results: [{ key: 'b', value: 2, version: { number: 1 } }]
+        }];
+      });
+
+      const results = await client.getAllProperties('123', { pageSize: 1 });
+      expect(results).toHaveLength(2);
+      expect(results[0].key).toBe('a');
+      expect(results[1].key).toBe('b');
+
+      mock.restore();
+    });
+
+    test('getProperty should return property data', async () => {
+      const mock = new MockAdapter(client.client);
+      mock.onGet('/content/123/property/color').reply(200, {
+        key: 'color',
+        value: { hex: '#ff0000' },
+        version: { number: 2 }
+      });
+
+      const result = await client.getProperty('123', 'color');
+      expect(result.key).toBe('color');
+      expect(result.value.hex).toBe('#ff0000');
+
+      mock.restore();
+    });
+
+    test('getProperty should throw on 404', async () => {
+      const mock = new MockAdapter(client.client);
+      mock.onGet('/content/123/property/missing').reply(404, { message: 'Not found' });
+
+      await expect(client.getProperty('123', 'missing')).rejects.toThrow();
+
+      mock.restore();
+    });
+
+    test('setProperty should create new property with version 1', async () => {
+      const mock = new MockAdapter(client.client);
+      mock.onGet('/content/123/property/newkey').reply(404);
+      mock.onPut('/content/123/property/newkey').reply((config) => {
+        const body = JSON.parse(config.data);
+        expect(body.version.number).toBe(1);
+        expect(body.key).toBe('newkey');
+        return [200, body];
+      });
+
+      const result = await client.setProperty('123', 'newkey', { data: true });
+      expect(result.version.number).toBe(1);
+
+      mock.restore();
+    });
+
+    test('setProperty should auto-increment version for existing property', async () => {
+      const mock = new MockAdapter(client.client);
+      mock.onGet('/content/123/property/existing').reply(200, {
+        key: 'existing',
+        value: 'old',
+        version: { number: 5 }
+      });
+      mock.onPut('/content/123/property/existing').reply((config) => {
+        const body = JSON.parse(config.data);
+        expect(body.version.number).toBe(6);
+        return [200, body];
+      });
+
+      const result = await client.setProperty('123', 'existing', 'new');
+      expect(result.version.number).toBe(6);
+
+      mock.restore();
+    });
+
+    test('setProperty should propagate non-404 errors', async () => {
+      const mock = new MockAdapter(client.client);
+      mock.onGet('/content/123/property/broken').reply(500);
+
+      await expect(client.setProperty('123', 'broken', 'val')).rejects.toThrow();
+
+      mock.restore();
+    });
+
+    test('deleteProperty should call delete endpoint', async () => {
+      const mock = new MockAdapter(client.client);
+      mock.onDelete('/content/123/property/color').reply(204);
+
+      const result = await client.deleteProperty('123', 'color');
+      expect(result).toEqual({ pageId: '123', key: 'color' });
+
+      mock.restore();
+    });
+
+    test('getProperty should URL-encode keys with reserved characters', async () => {
+      const mock = new MockAdapter(client.client);
+      mock.onGet('/content/123/property/my%20prop%2Fkey').reply(200, {
+        key: 'my prop/key',
+        value: { ok: true },
+        version: { number: 1 }
+      });
+
+      const result = await client.getProperty('123', 'my prop/key');
+      expect(result.key).toBe('my prop/key');
+      expect(result.value.ok).toBe(true);
+
+      mock.restore();
+    });
+
+    test('setProperty should URL-encode keys with reserved characters', async () => {
+      const mock = new MockAdapter(client.client);
+      mock.onGet('/content/123/property/my%20prop%2Fkey').reply(404);
+      mock.onPut('/content/123/property/my%20prop%2Fkey').reply((config) => {
+        const body = JSON.parse(config.data);
+        expect(body.key).toBe('my prop/key');
+        expect(body.version.number).toBe(1);
+        return [200, body];
+      });
+
+      const result = await client.setProperty('123', 'my prop/key', { test: true });
+      expect(result.key).toBe('my prop/key');
+
+      mock.restore();
+    });
+
+    test('deleteProperty should URL-encode keys with reserved characters', async () => {
+      const mock = new MockAdapter(client.client);
+      mock.onDelete('/content/123/property/my%20prop%2Fkey').reply(204);
+
+      const result = await client.deleteProperty('123', 'my prop/key');
+      expect(result).toEqual({ pageId: '123', key: 'my prop/key' });
+
+      mock.restore();
+    });
+
+    test('deleteProperty should resolve page URLs', async () => {
+      const mock = new MockAdapter(client.client);
+      mock.onDelete('/content/789/property/status').reply(204);
+
+      const result = await client.deleteProperty(
+        'https://test.atlassian.net/wiki/viewpage.action?pageId=789',
+        'status'
+      );
+      expect(result).toEqual({ pageId: '789', key: 'status' });
+
+      mock.restore();
+    });
+  });
 });
