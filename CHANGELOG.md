@@ -1,3 +1,10 @@
+# [1.18.0](https://github.com/pchuri/confluence-cli/compare/v1.17.0...v1.18.0) (2026-02-15)
+
+
+### Features
+
+* add content property commands (list, get, set, delete) ([#38](https://github.com/pchuri/confluence-cli/issues/38)) ([506515d](https://github.com/pchuri/confluence-cli/commit/506515dd0c271e5385ede3a49225d4b4707f225d)), closes [#37](https://github.com/pchuri/confluence-cli/issues/37)
+
 # [1.17.0](https://github.com/pchuri/confluence-cli/compare/v1.16.0...v1.17.0) (2026-02-13)
 
 
