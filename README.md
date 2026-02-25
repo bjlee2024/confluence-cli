@@ -1,6 +1,12 @@
-# Confluence CLI
+# Confluence CLI (Fork)
+
+> This is a fork of [pchuri/confluence-cli](https://github.com/pchuri/confluence-cli) with bug fixes.
 
 A powerful command-line interface for Atlassian Confluence that allows you to read, search, and manage your Confluence content from the terminal.
+
+## Changes from upstream
+
+- **fix: `find` returns `ID: undefined` when a space name matches** — When `confluence find "<title>"` matched a Confluence space instead of a page, the CLI returned `ID: undefined`. Now it throws a descriptive error with CQL search guidance.
 
 ## Features
 
@@ -21,12 +27,12 @@ A powerful command-line interface for Atlassian Confluence that allows you to re
 ## Installation
 
 ```bash
-npm install -g confluence-cli
+npm install -g @bjlee2024/confluence-cli
 ```
 
 Or run directly with npx:
 ```bash
-npx confluence-cli
+npx @bjlee2024/confluence-cli
 ```
 
 ## Quick Start

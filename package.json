@@ -1,7 +1,7 @@
 {
-  "name": "confluence-cli",
-  "version": "1.19.0",
-  "description": "A command-line interface for Atlassian Confluence with page creation and editing capabilities",
+  "name": "@bjlee2024/confluence-cli",
+  "version": "1.19.1",
+  "description": "A command-line interface for Atlassian Confluence with page creation and editing capabilities (fork with bug fixes)",
   "main": "index.js",
   "bin": {
     "confluence": "bin/index.js",
@@ -49,10 +49,10 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/pchuri/confluence-cli.git"
+    "url": "git+https://github.com/bjlee2024/confluence-cli.git"
   },
   "bugs": {
-    "url": "https://github.com/pchuri/confluence-cli/issues"
+    "url": "https://github.com/bjlee2024/confluence-cli/issues"
   },
-  "homepage": "https://github.com/pchuri/confluence-cli#readme"
+  "homepage": "https://github.com/bjlee2024/confluence-cli#readme"
 }
